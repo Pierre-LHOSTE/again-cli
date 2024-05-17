@@ -1,6 +1,6 @@
 "use client";
-import darkTheme from "@/src/themes/dark";
-import lightTheme from "@/src/themes/light";
+import darkTheme from "@/src/styles/themes/dark";
+import lightTheme from "@/src/styles/themes/light";
 import { ConfigProvider } from "antd";
 import { useEffect, useState } from "react";
 

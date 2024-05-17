@@ -5,7 +5,6 @@ import { Inter } from "next/font/google";
 import "overlayscrollbars/overlayscrollbars.css";
 import { AntdConfig } from "./AntdConfig";
 import StyledComponentsRegistry from "./AntdRegistry";
-import "./globals.scss";
 
 const inter = Inter({ subsets: ["latin"] });
 
