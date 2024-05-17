@@ -8,6 +8,7 @@ import {
   DependencyType,
   dependencies as allDependencies,
 } from "./dependencies";
+import { AntdConfigURL, AntdRegistryURL } from "./filesUrl";
 import { gitignore } from "./gitignore";
 import { createNextAppOptions, storybookOptions } from "./installOptions";
 import {
@@ -57,6 +58,7 @@ program.parse(process.argv);
   const createNextAppRun = spawn(...createNextAppCommand);
   await handleProcessEvents(
     createNextAppRun,
+    "npm",
     "create-next-app",
     createNextAppCommandRaw
   );
@@ -66,6 +68,20 @@ program.parse(process.argv);
   const project = new Project({
     tsConfigFilePath: "./tsconfig.json",
   });
+
+  // SECTION: Move pages folder to src
+
+  const movePagesCommandRaw = `mkdir -p src && mv -v app src/app`;
+  const movePagesCommand = makeCommand(movePagesCommandRaw);
+  const movePagesRun = spawn(...movePagesCommand, { shell: true });
+  await handleProcessEvents(
+    movePagesRun,
+    "move",
+    "app to src/app",
+    movePagesCommandRaw
+  );
+
+  //!SECTION
 
   //!SECTION
   // SECTION: Install dependencies
@@ -83,7 +99,8 @@ program.parse(process.argv);
     const installNormalDependencyRun = spawn(...installNormalDependencyCommand);
     await handleProcessEvents(
       installNormalDependencyRun,
-      "dependencies",
+      "install",
+      "Dependencies",
       installNormalDependencyCommandRaw
     );
   }
@@ -98,7 +115,8 @@ program.parse(process.argv);
     const installDevDependencyRun = spawn(...installDevDependencyCommand);
     await handleProcessEvents(
       installDevDependencyRun,
-      "dev-dependencies",
+      "install",
+      "Dev dependencies",
       installDevDependencyCommandRaw
     );
   }
@@ -113,7 +131,8 @@ program.parse(process.argv);
     const installTypesDependencyRun = spawn(...installTypesDependencyCommand);
     await handleProcessEvents(
       installTypesDependencyRun,
-      "types-dependencies",
+      "install",
+      "Types dependencies",
       installTypesDependencyCommandRaw
     );
   }
@@ -127,7 +146,8 @@ program.parse(process.argv);
     const renamePreview = spawn(...renameCommand);
     await handleProcessEvents(
       renamePreview,
-      "rename-globals-scss",
+      "rename",
+      "globals-scss",
       renameGlobalsCommandRaw
     );
 
@@ -143,7 +163,8 @@ program.parse(process.argv);
     const installStorybook = spawn(initStorybookCommandRaw, { shell: true });
     await handleProcessEvents(
       installStorybook,
-      "storybook",
+      "npm",
+      "Storybook",
       initStorybookCommandRaw
     );
 
@@ -153,7 +174,8 @@ program.parse(process.argv);
     });
     await handleProcessEvents(
       installStorybookDeps,
-      "storybook-dependencies",
+      "install",
+      "Storybook dependencies",
       installStorybookDepCommandRaw
     );
 
@@ -179,7 +201,8 @@ program.parse(process.argv);
     const renamePreview = spawn(...renameCommand);
     await handleProcessEvents(
       renamePreview,
-      "rename-preview.tsx",
+      "rename",
+      "preview.tsx",
       renameCommandRaw
     );
 
@@ -202,9 +225,50 @@ program.parse(process.argv);
     const initPrismaCommandRaw = `npx prisma init`;
     const initPrismaCommand = makeCommand(initPrismaCommandRaw);
     const initPrisma = spawn(...initPrismaCommand);
-    await handleProcessEvents(initPrisma, "prisma", initPrismaCommandRaw);
+    await handleProcessEvents(
+      initPrisma,
+      "npm",
+      "Prisma",
+      initPrismaCommandRaw
+    );
 
     //!SECTION
+  }
+
+  // SECTION: Add antd config
+
+  if (dependencies.includes("antd")) {
+    const addAntRegistryDepCommandRaw = `pnpm i @ant-design/cssinjs`;
+    const addAntRegistryDepCommand = makeCommand(addAntRegistryDepCommandRaw);
+    const addAntRegistryDep = spawn(...addAntRegistryDepCommand);
+    await handleProcessEvents(
+      addAntRegistryDep,
+      "install",
+      "AntRegistry dependencies",
+      addAntRegistryDepCommandRaw
+    );
+
+    const addAntRegistryCommandRaw = `curl --no-progress-meter -o "./app/AntdRegistry.tsx" "${AntdRegistryURL}"`;
+    const addAntRegistryCommand = spawn(addAntRegistryCommandRaw, {
+      shell: true,
+    });
+    await handleProcessEvents(
+      addAntRegistryCommand,
+      "curl",
+      "antRegistry.tsx",
+      addAntRegistryCommandRaw
+    );
+
+    const addAntConfigCommandRaw = `curl --no-progress-meter -o "./app/AntConfig.tsx" "${AntdConfigURL}"`;
+    const addAntConfigCommand = spawn(addAntConfigCommandRaw, { shell: true });
+    await handleProcessEvents(
+      addAntConfigCommand,
+      "curl",
+      "antConfig.tsx",
+      addAntConfigCommandRaw
+    );
+
+    // !SECTION
   }
 
   // SECTION: Update .gitignore
@@ -249,7 +313,7 @@ program.parse(process.argv);
   const prettierCommandRaw = `pnpx prettier --write .`;
   const prettierCommand = makeCommand(prettierCommandRaw);
   const prettier = spawn(...prettierCommand);
-  await handleProcessEvents(prettier, "prettier", prettierCommandRaw);
+  await handleProcessEvents(prettier, "npm", "Prettier", prettierCommandRaw);
 
   //!SECTION
   // SECTION: Final message
@@ -424,7 +488,7 @@ function updatePreviewFile(previewFile: SourceFile, isAntd?: boolean) {
   }
 }
 
-function getLogConfig(name: string, rawCommand?: string) {
+function getLogConfig(name: string, type: string, rawCommand?: string) {
   const logConfig = {
     color: c.white,
     loading: "Step " + name + "…",
@@ -432,55 +496,109 @@ function getLogConfig(name: string, rawCommand?: string) {
     icon: c.white(""),
   };
 
-  switch (name) {
-    case "create-next-app":
-      logConfig.color = c.white;
-      logConfig.loading = "Running create-next-app command …";
-      logConfig.success = "Command create-next-app completed!";
-      logConfig.icon = "󰔶";
-      break;
-    case "dependencies":
-    case "dev-dependencies":
-    case "types-dependencies":
-    case "storybook-dependencies":
+  switch (type) {
+    case "npm":
       logConfig.color = c.redBright;
-      logConfig.loading =
-        "Installing " +
-        name.replace(/^(\w)/, (m, p) => p.toUpperCase()).replace(/-/, " ") +
-        " …";
-      logConfig.success = "Dependencies installed!";
+      logConfig.loading = `Running ${name} command …`;
+      logConfig.success = `Command ${name} completed!`;
+      logConfig.icon = "";
+      switch (name.toLowerCase()) {
+        case "create-next-app":
+          logConfig.color = c.white;
+          logConfig.icon = "󰔶";
+          break;
+        case "storybook":
+          logConfig.color = c.magenta;
+          logConfig.loading = "Initializing Storybook …";
+          logConfig.success = "Storybook initialized!";
+          logConfig.icon = "";
+          break;
+        case "prisma":
+          logConfig.color = c.cyan;
+          logConfig.loading = "Initializing Prisma …";
+          logConfig.success = "Prisma initialized!";
+          logConfig.icon = "";
+          break;
+        case "prettier":
+          logConfig.color = c.blue;
+          logConfig.loading = "Running prettier …";
+          logConfig.success = "Prettier completed!";
+          logConfig.icon = "";
+          break;
+      }
+      break;
+    case "install":
+      logConfig.color = c.redBright;
+      logConfig.loading = `Installing ${name} …`;
+      logConfig.success = `${name} installed!`;
       logConfig.icon = "󰇚";
       break;
-    case "storybook":
+    case "rename":
+      logConfig.color = c.white;
+      logConfig.loading = `Renaming ${name} …`;
+      logConfig.success = `File ${name} renamed!`;
+      logConfig.icon = "";
+      break;
+    case "curl":
+      logConfig.color = c.yellow;
+      logConfig.loading = `Adding ${name} …`;
+      logConfig.success = `File ${name} added!`;
+      logConfig.icon = "󰇚";
+      break;
+    case "move":
       logConfig.color = c.magenta;
-      logConfig.loading = "Initializing Storybook …";
-      logConfig.success = "Storybook initialized!";
-      logConfig.icon = "";
+      logConfig.loading = `Moving ${name} …`;
+      logConfig.success = `File ${name} moved!`;
+      logConfig.icon = "󰇚";
       break;
-    case "prisma":
-      logConfig.color = c.cyan;
-      logConfig.loading = "Initializing Prisma …";
-      logConfig.success = "Prisma initialized!";
-      logConfig.icon = "";
-      break;
-    case "prettier":
-      logConfig.color = c.blue;
-      logConfig.loading = "Running prettier …";
-      logConfig.success = "Prettier completed!";
-      logConfig.icon = "";
-      break;
-    case "rename-preview.tsx":
-      logConfig.color = c.white;
-      logConfig.loading = "Renaming preview.ts to preview.tsx …";
-      logConfig.success = "File renamed!";
-      logConfig.icon = "";
-      break;
-    case "rename-globals-scss":
-      logConfig.color = c.white;
-      logConfig.loading = "Renaming globals.css to globals.scss …";
-      logConfig.success = "File renamed!";
-      logConfig.icon = "";
-      break;
+    // case "create-next-app":
+    //   logConfig.color = c.white;
+    //   logConfig.loading = "Running create-next-app command …";
+    //   logConfig.success = "Command create-next-app completed!";
+    //   logConfig.icon = "󰔶";
+    //   break;
+    // case "dependencies":
+    // case "dev-dependencies":
+    // case "types-dependencies":
+    // case "storybook-dependencies":
+    //   logConfig.color = c.redBright;
+    //   logConfig.loading =
+    //     "Installing " +
+    //     name.replace(/^(\w)/, (m, p) => p.toUpperCase()).replace(/-/, " ") +
+    //     " …";
+    //   logConfig.success = "Dependencies installed!";
+    //   logConfig.icon = "󰇚";
+    //   break;
+    // case "storybook":
+    //   logConfig.color = c.magenta;
+    //   logConfig.loading = "Initializing Storybook …";
+    //   logConfig.success = "Storybook initialized!";
+    //   logConfig.icon = "";
+    //   break;
+    // case "prisma":
+    //   logConfig.color = c.cyan;
+    //   logConfig.loading = "Initializing Prisma …";
+    //   logConfig.success = "Prisma initialized!";
+    //   logConfig.icon = "";
+    //   break;
+    // case "prettier":
+    //   logConfig.color = c.blue;
+    //   logConfig.loading = "Running prettier …";
+    //   logConfig.success = "Prettier completed!";
+    //   logConfig.icon = "";
+    //   break;
+    // case "rename-preview.tsx":
+    //   logConfig.color = c.white;
+    //   logConfig.loading = "Renaming preview.ts to preview.tsx …";
+    //   logConfig.success = "File renamed!";
+    //   logConfig.icon = "";
+    //   break;
+    // case "rename-globals-scss":
+    //   logConfig.color = c.white;
+    //   logConfig.loading = "Renaming globals.css to globals.scss …";
+    //   logConfig.success = "File renamed!";
+    //   logConfig.icon = "";
+    //   break;
 
     default:
       break;
@@ -505,7 +623,8 @@ function processLog(message: string, color: (arg0: string) => string) {
 function customLog(
   message: string,
   color: (arg0: string) => string,
-  type?: string
+  type?: string,
+  rawCommand?: string
 ) {
   let icon = "";
   if (type) {
@@ -528,6 +647,9 @@ function customLog(
   }
 
   message = color(BB) + " " + color(icon) + (type ? c.white(message) : message);
+  if (rawCommand) {
+    message += "\n" + color(BB) + " " + c.dim("󱞩 " + rawCommand);
+  }
   if (type && type !== "success") {
     message = "\n" + message + "\n" + color(BB);
   }
@@ -540,10 +662,11 @@ function customLog(
 
 function handleProcessEvents(
   cmdProcess: any,
+  type: string,
   name: string,
   rawCommand?: string
 ) {
-  const { color, success, loading } = getLogConfig(name, rawCommand);
+  const { color, success, loading } = getLogConfig(name, type, rawCommand);
   processLog("\n" + loading + "\n\n", color);
   return new Promise<void>((resolve, reject) => {
     cmdProcess.stdout?.on("data", (data: any) => {
