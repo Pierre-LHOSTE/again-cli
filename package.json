@@ -1,0 +1,28 @@
+{
+  "name": "again-cli",
+  "bin": {
+    "again": "./dist/index.js"
+  },
+  "version": "0.1.0",
+  "description": "",
+  "scripts": {
+    "dev": "tsc -w",
+    "link-cli": "yarn --global unlink again-cli && yarn --global link"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.12.10",
+    "@types/prompts": "^2.4.9",
+    "@types/validate-npm-package-name": "^4.0.2",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "chalk": "4.1.2",
+    "commander": "^12.0.0",
+    "prompts": "^2.4.2",
+    "ts-morph": "^22.0.0",
+    "validate-npm-package-name": "^5.0.1"
+  }
+}

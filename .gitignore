@@ -1,0 +1,17 @@
+node_modules
+/.vscode
+dist
+test
+*storybook.log
+
+# environment
+.env
+
+# vscode
+/.vscode
+
+# test
+my-again-app/
+test/
+test.js
+src/old/
