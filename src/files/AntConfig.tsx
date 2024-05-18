@@ -4,7 +4,7 @@ import lightTheme from "@/src/styles/themes/light";
 import { ConfigProvider } from "antd";
 import { useEffect, useState } from "react";
 
-export function AntdConfig({
+export default function AntConfig({
   children,
 }: Readonly<{
   children: React.ReactNode;

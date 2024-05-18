@@ -2,6 +2,7 @@ export const createNextAppOptions = [
   "--typescript",
   "--no-tailwind",
   "--eslint",
+  "--src-dir",
   "--app",
   "--no-src-dir",
   "--no-import-alias",

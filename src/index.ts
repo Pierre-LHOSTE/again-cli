@@ -8,7 +8,13 @@ import {
   DependencyType,
   dependencies as allDependencies,
 } from "./dependencies";
-import { AntdConfigURL, AntdRegistryURL } from "./filesUrl";
+import {
+  AntConfigURL,
+  AntRegistryURL,
+  darkThemeURL,
+  lightThemeURL,
+  rootLayoutURL,
+} from "./filesUrl";
 import { gitignore } from "./gitignore";
 import { createNextAppOptions, storybookOptions } from "./installOptions";
 import {
@@ -69,19 +75,75 @@ program.parse(process.argv);
     tsConfigFilePath: "./tsconfig.json",
   });
 
-  // SECTION: Move pages folder to src
+  // SECTION: Remove styles files
 
-  const movePagesCommandRaw = `mkdir -p src && mv -v app src/app`;
-  const movePagesCommand = makeCommand(movePagesCommandRaw);
-  const movePagesRun = spawn(...movePagesCommand, { shell: true });
+  const removeStyleFilesCommandRaw = `find ./src/app -type f -name "*.css" -delete`;
+  const removeStyleFilesCommand = makeCommand(removeStyleFilesCommandRaw);
+  const removeStyleFilesRun = spawn(...removeStyleFilesCommand, {
+    shell: true,
+  });
   await handleProcessEvents(
-    movePagesRun,
-    "move",
-    "app to src/app",
-    movePagesCommandRaw
+    removeStyleFilesRun,
+    "npm",
+    "Remove css files",
+    removeStyleFilesCommandRaw
   );
 
+  customLog("Deleting CSS import …", c.red, "󰓾");
+  const pageFile = project.addSourceFileAtPath("./src/app/page.tsx");
+  if (!pageFile) throw new Error("page.tsx file not found");
+  customLog("page.tsx file found", c.red);
+  const importPageDeclarations = pageFile.getImportDeclarations();
+  importPageDeclarations.forEach((importDeclaration) => {
+    const moduleSpecifier = importDeclaration.getModuleSpecifierValue();
+    if (moduleSpecifier.endsWith(".css")) {
+      importDeclaration.replaceWithText("");
+    }
+  });
+  customLog("page.tsx CSS importation removed", c.red);
+  pageFile.saveSync();
+  customLog("CSS importations removed", c.red, "success");
+
   //!SECTION
+
+  // SECTION: Update page return
+
+  customLog("Updating page return …", c.redBright, "update");
+  const homeFunction = pageFile
+    .getFunctions()
+    .find((func) => func.isDefaultExport() && func.getName() === "Home");
+  if (!homeFunction) throw new Error("Home function not found");
+  customLog("Home function found", c.redBright);
+  homeFunction.setBodyText(`return (<>Home</>);`);
+  pageFile.saveSync();
+  project.removeSourceFile(pageFile);
+  customLog("Page return updated", c.redBright, "success");
+
+  // !SECTION
+
+  // SECTION: Update layout file
+
+  const removeLayoutFileCommandRaw = `rm -rf ./src/app/layout.tsx`;
+  const removeLayoutFileCommand = makeCommand(removeLayoutFileCommandRaw);
+  const removeLayoutFile = spawn(...removeLayoutFileCommand);
+  await handleProcessEvents(
+    removeLayoutFile,
+    "npm",
+    "Remove layout file",
+    removeLayoutFileCommandRaw
+  );
+
+  const addLayoutFileCommandRaw = `curl --no-progress-meter -o "./src/app/layout.tsx" "${rootLayoutURL}"`;
+  const addLayoutFileCommand = makeCommand(addLayoutFileCommandRaw);
+  const addLayoutFile = spawn(...addLayoutFileCommand, { shell: true });
+  await handleProcessEvents(
+    addLayoutFile,
+    "curl",
+    "layout.tsx",
+    addLayoutFileCommandRaw
+  );
+
+  // !SECTION
 
   //!SECTION
   // SECTION: Install dependencies
@@ -138,21 +200,6 @@ program.parse(process.argv);
   }
 
   //!SECTION
-
-  if (dependencies.includes("sass")) {
-    // SECTION: Rename files
-    const renameGlobalsCommandRaw = `mv ./app/globals.css ./app/globals.scss`;
-    const renameCommand = makeCommand(renameGlobalsCommandRaw);
-    const renamePreview = spawn(...renameCommand);
-    await handleProcessEvents(
-      renamePreview,
-      "rename",
-      "globals-scss",
-      renameGlobalsCommandRaw
-    );
-
-    //!SECTION
-  }
 
   if (dependencies.includes("storybook")) {
     // SECTION: Install storybook
@@ -216,6 +263,23 @@ program.parse(process.argv);
     customLog("Storybook preview updated", c.magenta, "success");
 
     // !SECTION
+
+    // SECTION: delete stories folder
+
+    const deleteStoriesFolderCommandRaw = `rm -rf ./src/stories`;
+    const deleteStoriesFolderCommand = makeCommand(
+      deleteStoriesFolderCommandRaw
+    );
+    const deleteStoriesFolder = spawn(...deleteStoriesFolderCommand);
+    await handleProcessEvents(
+      deleteStoriesFolder,
+      "npm",
+      "Delete stories folder",
+      deleteStoriesFolderCommandRaw
+    );
+
+    // !SECTION
+
     //!SECTION
   }
 
@@ -248,7 +312,7 @@ program.parse(process.argv);
       addAntRegistryDepCommandRaw
     );
 
-    const addAntRegistryCommandRaw = `curl --no-progress-meter -o "./app/AntdRegistry.tsx" "${AntdRegistryURL}"`;
+    const addAntRegistryCommandRaw = `curl --no-progress-meter -o "./src/app/AntdRegistry.tsx" "${AntRegistryURL}"`;
     const addAntRegistryCommand = spawn(addAntRegistryCommandRaw, {
       shell: true,
     });
@@ -259,13 +323,40 @@ program.parse(process.argv);
       addAntRegistryCommandRaw
     );
 
-    const addAntConfigCommandRaw = `curl --no-progress-meter -o "./app/AntConfig.tsx" "${AntdConfigURL}"`;
+    const addThemeDirCommandRaw = `mkdir -p ./src/styles/themes`;
+    const addThemeDirCommand = spawn(addThemeDirCommandRaw, { shell: true });
+    await handleProcessEvents(
+      addThemeDirCommand,
+      "mkdir",
+      "Themes directory",
+      addThemeDirCommandRaw
+    );
+
+    const addAntConfigCommandRaw = `curl --no-progress-meter -o "./src/app/AntConfig.tsx" "${AntConfigURL}"`;
     const addAntConfigCommand = spawn(addAntConfigCommandRaw, { shell: true });
     await handleProcessEvents(
       addAntConfigCommand,
       "curl",
       "antConfig.tsx",
       addAntConfigCommandRaw
+    );
+
+    const addAntDarkTheme = `curl --no-progress-meter -o "./src/styles/themes/dark.tsx" "${darkThemeURL}"`;
+    const addAntDarkThemeCommand = spawn(addAntDarkTheme, { shell: true });
+    await handleProcessEvents(
+      addAntDarkThemeCommand,
+      "curl",
+      "Dark Theme",
+      addAntDarkTheme
+    );
+
+    const addAntLightTheme = `curl --no-progress-meter -o "./src/styles/themes/light.tsx" "${lightThemeURL}"`;
+    const addAntLightThemeCommand = spawn(addAntLightTheme, { shell: true });
+    await handleProcessEvents(
+      addAntLightThemeCommand,
+      "curl",
+      "Light Theme",
+      addAntLightTheme
     );
 
     // !SECTION
@@ -423,9 +514,8 @@ function updatePreviewFile(previewFile: SourceFile, isAntd?: boolean) {
       "",
       isAntd ? `import { ConfigProvider } from "antd";` : "",
       `import React from "react";`,
-      `import "../app/globals.scss";`,
-      isAntd ? `import darkTheme from "../src/themes/dark";` : "",
-      isAntd ? `import lightTheme from "../src/themes/light";` : "",
+      isAntd ? `import darkTheme from "../src/styles/themes/dark";` : "",
+      isAntd ? `import lightTheme from "../src/styles/themes/light";` : "",
       "",
       `const isDarkTheme = window.matchMedia("(prefers-color-scheme: dark)").matches;`,
     ]);

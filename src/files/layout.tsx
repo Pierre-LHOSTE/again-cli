@@ -1,10 +1,5 @@
-import Message from "@/src/components/message/Message";
-import Notification from "@/src/components/message/Notification";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "overlayscrollbars/overlayscrollbars.css";
-import { AntdConfig } from "./AntdConfig";
-import StyledComponentsRegistry from "./AntdRegistry";
 
 const inter = Inter({ subsets: ["latin"] });
 
