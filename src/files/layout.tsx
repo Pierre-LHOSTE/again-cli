@@ -18,13 +18,13 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <StyledComponentsRegistry>
-          <AntdConfig>
+          <AntConfig>
             {children}
             <>
               <Message />
               <Notification />
             </>
-          </AntdConfig>
+          </AntConfig>
         </StyledComponentsRegistry>
       </body>
     </html>
