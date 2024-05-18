@@ -1,13 +1,16 @@
 {
-  "name": "again-cli",
+  "name": "go-again",
   "bin": {
-    "again": "./dist/index.js"
+    "go-again": "./dist/index.js"
   },
   "version": "0.1.0",
   "description": "",
+  "files": [
+    "dist",
+    "package.json"
+  ],
   "scripts": {
-    "dev": "tsc -w",
-    "link-cli": "yarn --global unlink again-cli && yarn --global link"
+    "dev": "tsc -w"
   },
   "keywords": [],
   "author": "",

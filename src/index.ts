@@ -22,8 +22,6 @@ import {
   newDirQuestion,
 } from "./questions";
 
-console.clear();
-
 const BB = "┃";
 
 const SPECIAL_DEPS = ["storybook"];
