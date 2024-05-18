@@ -609,7 +609,8 @@ function updatePreviewFile(previewFile: SourceFile, isAntd?: boolean) {
 
       configObject.addPropertyAssignment({
         name: "decorators",
-        initializer: `[
+        initializer: isAntd
+          ? `[
           (Story) => {
             const isDarkTheme = window.matchMedia(
               "(prefers-color-scheme: dark)"
@@ -619,6 +620,11 @@ function updatePreviewFile(previewFile: SourceFile, isAntd?: boolean) {
                 <Story />
               </ConfigProvider>
             );
+          },
+        ]`
+          : `[
+          (Story) => {
+            return <Story />;
           },
         ]`,
       });
