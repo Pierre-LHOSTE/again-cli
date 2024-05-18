@@ -3,7 +3,7 @@ import c from "chalk";
 import { spawn } from "child_process";
 import { Command } from "commander";
 import prompts from "prompts";
-import { Project, SourceFile, SyntaxKind } from "ts-morph";
+import { Project, PropertyAssignment, SourceFile, SyntaxKind } from "ts-morph";
 import {
   DependencyType,
   dependencies as allDependencies,
@@ -13,7 +13,6 @@ import {
   AntRegistryURL,
   darkThemeURL,
   lightThemeURL,
-  rootLayoutURL,
 } from "./filesUrl";
 import { gitignore } from "./gitignore";
 import { createNextAppOptions, storybookOptions } from "./installOptions";
@@ -90,6 +89,18 @@ program.parse(process.argv);
   );
 
   customLog("Deleting CSS import …", c.red, "󰓾");
+  const layoutFile = project.addSourceFileAtPath("./src/app/layout.tsx");
+  if (!layoutFile) throw new Error("layout.tsx file not found");
+  customLog("layout.tsx file found", c.red);
+  const importLayoutDeclarations = layoutFile.getImportDeclarations();
+  importLayoutDeclarations.forEach((importDeclaration) => {
+    const moduleSpecifier = importDeclaration.getModuleSpecifierValue();
+    if (moduleSpecifier.endsWith(".css")) {
+      importDeclaration.replaceWithText("");
+    }
+  });
+  customLog("page.tsx CSS importation removed", c.red);
+  layoutFile.saveSync();
   const pageFile = project.addSourceFileAtPath("./src/app/page.tsx");
   if (!pageFile) throw new Error("page.tsx file not found");
   customLog("page.tsx file found", c.red);
@@ -105,7 +116,42 @@ program.parse(process.argv);
   customLog("CSS importations removed", c.red, "success");
 
   //!SECTION
+  // SECTION: Update layout meta
 
+  customLog("Updating layout meta …", c.redBright, "update");
+  const metadata = layoutFile.getVariableDeclarationOrThrow("metadata");
+  const metadataObject = metadata.getInitializerIfKind(
+    SyntaxKind.ObjectLiteralExpression
+  );
+  if (!metadataObject) throw new Error("Metadata object not found");
+  customLog("Metadata object found", c.redBright);
+  const titleProperty = metadataObject.getProperty(
+    "title"
+  ) as PropertyAssignment;
+  if (!titleProperty) throw new Error("Title property not found");
+  customLog("Title property found", c.redBright);
+  const projectTitle = projectPath.split("/").pop();
+  titleProperty.setInitializer(`"${projectTitle}"`);
+  const descriptionProperty = metadataObject.getProperty(
+    "description"
+  ) as PropertyAssignment;
+  if (!descriptionProperty) throw new Error("Description property not found");
+  customLog("Description property found", c.redBright);
+  descriptionProperty.setInitializer(
+    `"Temporary ${projectTitle} project description by create-next-app and again-cli"`
+  );
+
+  customLog("Title updated", c.redBright);
+
+  layoutFile.insertText(
+    metadataObject.getStart(),
+    "Update metadata".replace(/(.*)/, "TODO: $1").replace(/(.*)/, "// $1\n")
+  );
+  customLog("TODO added", c.redBright);
+
+  layoutFile.saveSync();
+
+  // !SECTION
   // SECTION: Update page return
 
   customLog("Updating page return …", c.redBright, "update");
@@ -118,30 +164,6 @@ program.parse(process.argv);
   pageFile.saveSync();
   project.removeSourceFile(pageFile);
   customLog("Page return updated", c.redBright, "success");
-
-  // !SECTION
-
-  // SECTION: Update layout file
-
-  const removeLayoutFileCommandRaw = `rm -rf ./src/app/layout.tsx`;
-  const removeLayoutFileCommand = makeCommand(removeLayoutFileCommandRaw);
-  const removeLayoutFile = spawn(...removeLayoutFileCommand);
-  await handleProcessEvents(
-    removeLayoutFile,
-    "npm",
-    "Remove layout file",
-    removeLayoutFileCommandRaw
-  );
-
-  const addLayoutFileCommandRaw = `curl --no-progress-meter -o "./src/app/layout.tsx" "${rootLayoutURL}"`;
-  const addLayoutFileCommand = makeCommand(addLayoutFileCommandRaw);
-  const addLayoutFile = spawn(...addLayoutFileCommand, { shell: true });
-  await handleProcessEvents(
-    addLayoutFile,
-    "curl",
-    "layout.tsx",
-    addLayoutFileCommandRaw
-  );
 
   // !SECTION
 
@@ -263,8 +285,7 @@ program.parse(process.argv);
     customLog("Storybook preview updated", c.magenta, "success");
 
     // !SECTION
-
-    // SECTION: delete stories folder
+    // SECTION: Delete stories folder
 
     const deleteStoriesFolderCommandRaw = `rm -rf ./src/stories`;
     const deleteStoriesFolderCommand = makeCommand(
@@ -312,7 +333,7 @@ program.parse(process.argv);
       addAntRegistryDepCommandRaw
     );
 
-    const addAntRegistryCommandRaw = `curl --no-progress-meter -o "./src/app/AntdRegistry.tsx" "${AntRegistryURL}"`;
+    const addAntRegistryCommandRaw = `curl --no-progress-meter -o "./src/app/AntRegistry.tsx" "${AntRegistryURL}"`;
     const addAntRegistryCommand = spawn(addAntRegistryCommandRaw, {
       shell: true,
     });
@@ -359,8 +380,58 @@ program.parse(process.argv);
       addAntLightTheme
     );
 
+    customLog("Updating layout file …", c.redBright, "update");
+    const layoutFile = project.addSourceFileAtPath("./src/app/layout.tsx");
+    layoutFile.addImportDeclarations([
+      {
+        defaultImport: "AntConfig",
+        moduleSpecifier: "./AntConfig",
+      },
+      {
+        defaultImport: "AntRegistry",
+        moduleSpecifier: "./AntRegistry",
+      },
+    ]);
+    customLog("Imports added", c.redBright);
+
+    const rootLayoutFunction = layoutFile.getFunctionOrThrow("RootLayout");
+
+    rootLayoutFunction.setBodyText(`
+  return (
+    <html lang="en">
+      <body className={inter.className}>
+        <AntRegistry>
+          <AntConfig>
+            {children}
+          </AntConfig>
+        </AntRegistry>
+      </body>
+    </html>
+  );
+    `);
+    customLog("return updated", c.redBright);
+
+    layoutFile.saveSync();
+    customLog("File layout updated", c.redBright, "success");
+
     // !SECTION
   }
+
+  /*
+
+
+
+
+
+
+
+
+
+
+
+
+
+  */
 
   // SECTION: Update .gitignore
 
@@ -381,22 +452,6 @@ program.parse(process.argv);
     console.error("Error updating .gitignore file", error);
   }
   customLog(".gitignore file updated", c.redBright, "success");
-
-  /*
-
-
-
-
-
-
-
-
-
-
-
-
-
-  */
 
   //!SECTION
   // SECTION: Apply prettier
