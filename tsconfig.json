@@ -11,5 +11,11 @@
     "skipLibCheck": false,
     "moduleResolution": "node16"
   },
-  "include": ["src/*.ts"]
+  "include": [
+    "src/*.ts",
+    "src/lib/validate-pkg.ts",
+    "src/config/dependencies.ts",
+    "src/config/urls.ts",
+    "src/config/gitignore.ts"
+  ]
 }

@@ -87,13 +87,6 @@ export const dependencies = {
   ],
 };
 
-export interface DependencyType {
-  name: string;
-  value: string;
-  dev: boolean;
-  needType: boolean;
-}
-
 function generateName(name: string, icon: string, color: c.Chalk) {
   return " " + color(icon) + "  " + name;
 }

@@ -1,8 +1,9 @@
 import c from "chalk";
 import path from "path";
 import { PromptObject } from "prompts";
-import { DependencyType, dependencies } from "./dependencies";
-import { validateNpmName } from "./validate-pkg";
+import { DependencyType } from "../lib/dependency/dependency.d";
+import { validateNpmName } from "../lib/validate-pkg";
+import { dependencies } from "./dependencies";
 
 export const nameQuestion: PromptObject = {
   type: "text",

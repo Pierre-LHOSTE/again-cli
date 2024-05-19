@@ -4,7 +4,6 @@ export const createNextAppOptions = [
   "--eslint",
   "--src-dir",
   "--app",
-  "--no-src-dir",
   "--no-import-alias",
   "--use-pnpm",
 ];
